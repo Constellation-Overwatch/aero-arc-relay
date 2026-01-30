@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/bluenviron/gomavlib/v2/pkg/dialect"
+	"github.com/bluenviron/gomavlib/v2/pkg/dialects/all"
 	"github.com/bluenviron/gomavlib/v2/pkg/dialects/ardupilotmega"
 	"github.com/bluenviron/gomavlib/v2/pkg/dialects/common"
+	"github.com/bluenviron/gomavlib/v2/pkg/dialects/development"
 	"github.com/bluenviron/gomavlib/v2/pkg/dialects/minimal"
 	"github.com/bluenviron/gomavlib/v2/pkg/dialects/paparazzi"
 	"github.com/bluenviron/gomavlib/v2/pkg/dialects/standard"
@@ -312,6 +314,13 @@ func validateMavLinkDialect(mavLink *MAVLinkConfig) error {
 		return nil
 	case "standard":
 		mavLink.Dialect = standard.Dialect
+		return nil
+	case "all":
+		mavLink.Dialect = all.Dialect
+		return nil
+	case "px4", "development":
+		// PX4 uses common dialect plus development extensions
+		mavLink.Dialect = development.Dialect
 		return nil
 	default:
 		return fmt.Errorf("%w: %s", ErrInvalidDialect, mavLink.DialectName)

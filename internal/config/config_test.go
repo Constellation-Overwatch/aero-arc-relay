@@ -388,3 +388,96 @@ sinks:
 		t.Errorf("Expected baud rate 57600, got %d", serialEndpoint.BaudRate)
 	}
 }
+
+// TestConfigDialects tests all supported MAVLink dialects
+func TestConfigDialects(t *testing.T) {
+	dialects := []string{
+		"common",
+		"minimal",
+		"ardupilot",
+		"ardupilotmega",
+		"apm",
+		"paparazzi",
+		"standard",
+		"all",
+		"px4",
+		"development",
+	}
+
+	for _, dialectName := range dialects {
+		t.Run(dialectName, func(t *testing.T) {
+			configContent := `
+mavlink:
+  dialect: "` + dialectName + `"
+  endpoints:
+    - name: "drone-1"
+      drone_id: "drone-1"
+      protocol: "udp"
+      mode: "1:1"
+      port: 14550
+
+sinks:
+  file:
+    path: "/tmp/test"
+    format: "json"
+`
+			tmpFile, err := os.CreateTemp("", "test-config-dialect-*.yaml")
+			if err != nil {
+				t.Fatalf("Failed to create temp file: %v", err)
+			}
+			defer os.Remove(tmpFile.Name())
+
+			if _, err := tmpFile.WriteString(configContent); err != nil {
+				t.Fatalf("Failed to write config: %v", err)
+			}
+			tmpFile.Close()
+
+			cfg, err := Load(tmpFile.Name())
+			if err != nil {
+				t.Fatalf("Failed to load config with dialect '%s': %v", dialectName, err)
+			}
+
+			if cfg.MAVLink.Dialect == nil {
+				t.Errorf("Dialect '%s' should resolve to a non-nil Dialect", dialectName)
+			}
+
+			if cfg.MAVLink.DialectName != dialectName {
+				t.Errorf("Expected dialect name '%s', got '%s'", dialectName, cfg.MAVLink.DialectName)
+			}
+		})
+	}
+}
+
+// TestConfigInvalidDialect tests that invalid dialects are rejected
+func TestConfigInvalidDialect(t *testing.T) {
+	configContent := `
+mavlink:
+  dialect: "invalid-dialect"
+  endpoints:
+    - name: "drone-1"
+      drone_id: "drone-1"
+      protocol: "udp"
+      mode: "1:1"
+      port: 14550
+
+sinks:
+  file:
+    path: "/tmp/test"
+    format: "json"
+`
+	tmpFile, err := os.CreateTemp("", "test-config-invalid-dialect-*.yaml")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	if _, err := tmpFile.WriteString(configContent); err != nil {
+		t.Fatalf("Failed to write config: %v", err)
+	}
+	tmpFile.Close()
+
+	_, err = Load(tmpFile.Name())
+	if err == nil {
+		t.Fatal("Expected error for invalid dialect")
+	}
+}
